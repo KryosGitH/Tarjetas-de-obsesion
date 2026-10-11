@@ -40,11 +40,11 @@ button:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
 .gold.up:not(.flipping){filter:drop-shadow(0 0 14px rgba(235,185,60,.8))}
 .gold .shine{opacity:1}.gold .tag{display:block;color:var(--gold)}
 /* prismatica */
-.prism .face img,.prism .ph{filter:saturate(1.1) brightness(1.14) contrast(1.05)}
+.prism .face img,.prism .ph{filter:saturate(1.15) brightness(1.02) contrast(1.08)}
 .prism.up:not(.flipping){filter:drop-shadow(0 0 14px rgba(190,170,255,.65))}
-.prism .pearl{opacity:.6;mix-blend-mode:color;background:conic-gradient(from calc(var(--a,0)*1deg),#ff9ad5,#ffe29a,#9affd4,#9ad0ff,#c79aff,#ff9ad5);animation:hue 7s linear infinite}
-.prism .face::after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;background:linear-gradient(135deg,rgba(255,255,255,.55),rgba(255,225,245,.15) 40%,rgba(205,240,255,.5))}
-.prism .shine{opacity:1;mix-blend-mode:color-dodge;background-size:220% 220%}
+.prism .pearl{opacity:.75;mix-blend-mode:color;background:conic-gradient(from calc(var(--a,0)*1deg),#ff9ad5,#ffe29a,#9affd4,#9ad0ff,#c79aff,#ff9ad5);animation:hue 7s linear infinite}
+.prism .face::after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,225,245,.05) 40%,rgba(205,240,255,.16))}
+.prism .shine{opacity:.85;mix-blend-mode:screen;background-size:220% 220%;background-image:linear-gradient(115deg,transparent 22%,rgba(255,140,220,.5) 38%,rgba(140,230,255,.55) 50%,rgba(180,150,255,.5) 62%,transparent 78%)}
 .prism .spark{opacity:.9;mix-blend-mode:color-dodge;background:radial-gradient(circle at 20% 25%,#fff 0 1px,transparent 2.5px),radial-gradient(circle at 70% 60%,#fff 0 1.5px,transparent 3px),radial-gradient(circle at 45% 85%,#fff 0 1px,transparent 2.5px);background-size:61px 67px,83px 79px,47px 53px;animation:twinkle 2.2s ease-in-out infinite alternate}
 .prism .spark::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 80% 15%,#fff 0 1px,transparent 2.5px),radial-gradient(circle at 30% 55%,#fff 0 1.5px,transparent 3px);background-size:71px 59px,53px 89px;animation:twinkle 1.7s ease-in-out -.8s infinite alternate}
 .prism .tag{display:block;color:#fff}
@@ -144,8 +144,8 @@ button:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
  #stage{min-height:min(440px,56dvh)}
  .binder{padding:12px 8px;border-left-width:10px}
  .grid{gap:6px}
- .acts{flex-direction:column;align-items:stretch;padding:0 4px}
- #again{width:100%;padding:16px}
+ .acts{align-items:center}
+ #again{width:auto;min-width:min(240px,70vw);padding:15px 30px}
  #dl{padding:10px}
  #pgtitle{min-width:0;flex:1;font-size:1.05rem}
  #cname{font-size:1.6rem}
@@ -216,7 +216,8 @@ try {
   unlimited = localStorage.getItem("tcg-unl") === "1";
 } catch(e){}
 const saveDay = () => { try { localStorage.setItem("tcg-day", JSON.stringify(daily)); } catch(e){} };
-let last = null, done = {};
+let last = null, done = {}, moonUsed = false;
+try { moonUsed = localStorage.getItem("tcg-moon") === "1"; } catch(e){}
 try { done = JSON.parse(localStorage.getItem("tcg-done") || "{}"); } catch(e){}
 const vib = v => { try { if(navigator.vibrate) navigator.vibrate(v); } catch(e){} };
 function buzz(dur){ const a = []; let t = 0; while(t < dur){ const on = Math.round(20 + 40*t/dur), gap = Math.round(150 - 110*t/dur); a.push(on, gap); t += on + gap; } vib(a); }
@@ -258,7 +259,7 @@ async function downloadCard(i, kind){
         ctx.globalCompositeOperation = "color"; ctx.globalAlpha = .6; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
       }
       const l = ctx.createLinearGradient(0, 0, W, H);
-      l.addColorStop(0, "rgba(255,255,255,.55)"); l.addColorStop(.4, "rgba(255,225,245,.15)"); l.addColorStop(1, "rgba(205,240,255,.5)");
+      l.addColorStop(0, "rgba(255,255,255,.18)"); l.addColorStop(.4, "rgba(255,225,245,.05)"); l.addColorStop(1, "rgba(205,240,255,.16)");
       ctx.globalCompositeOperation = "soft-light"; ctx.globalAlpha = 1; ctx.fillStyle = l; ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = "destination-in"; ctx.drawImage(im, 0, 0, W, H);
     }
@@ -402,11 +403,24 @@ function afterMode(){
   $("#hint").textContent = ok ? "" : "Has abierto tus sobres de hoy. Vuelve mañana.";
 }
 function setUnl(v){ unlimited = v; try { localStorage.setItem("tcg-unl", v ? "1" : "0"); } catch(e){} afterMode(); }
+const MOON_B64 = "bW9vbg=="; // código de la carta prismática
 function tryCode(){
-  let ok = false;
-  try { ok = btoa($("#codeIn").value.trim().toLowerCase()) === CODE_B64; } catch(e){}
-  $("#codeMsg").textContent = ok ? "Código correcto: sobres ilimitados." : "Código incorrecto.";
-  if(ok){ $("#codeIn").value = ""; $("#codeBox").hidden = true; setUnl(true); }
+  let v = ""; try { v = btoa($("#codeIn").value.trim().toLowerCase()); } catch(e){}
+  if(v === CODE_B64){ $("#codeMsg").textContent = "Código correcto: sobres ilimitados."; $("#codeIn").value = ""; $("#codeBox").hidden = true; setUnl(true); }
+  else if(v === MOON_B64) grantMoon();
+  else $("#codeMsg").textContent = "Código incorrecto.";
+}
+function grantMoon(){
+  const i = CARDS.findIndex(c => c.only === "p");
+  if(i < 0) return;
+  if(owned[i] && owned[i].p){ $("#codeMsg").textContent = "Ya tienes la carta exclusiva."; return; }
+  if(moonUsed){ $("#codeMsg").textContent = "Este código ya se ha usado."; return; }
+  if(document.querySelector(".pack.shake,.pack.torn,.card.flipping")){ $("#codeMsg").textContent = "Espera a que termine la apertura."; return; }
+  moonUsed = true; try { localStorage.setItem("tcg-moon", "1"); } catch(e){}
+  $("#codeIn").value = ""; $("#codeBox").hidden = true; $("#codeMsg").textContent = "Código correcto.";
+  $("#again").style.display = "none"; $("#dl").style.display = "none"; $("#msg").textContent = ""; $("#cname").textContent = ""; $("#newtag").hidden = true;
+  $("#stage").scrollIntoView({behavior:"smooth", block:"center"});
+  emerge(i, "p");
 }
 $("#codeLink").onclick = () => { $("#codeBox").hidden = !$("#codeBox").hidden; if(!$("#codeBox").hidden) $("#codeIn").focus(); };
 $("#codeOk").onclick = tryCode;
