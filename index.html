@@ -167,6 +167,7 @@ button:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
  #pgtitle{min-width:0;flex:1;font-size:1.05rem}
  #cname{font-size:1.6rem}
 }
+
 </style>
 </head>
 <body>
@@ -326,7 +327,11 @@ function cardEl(i, kind, up){
 
 function pick(kind, guaranteed){
   let w = CARDS.map((c, i) => kind === "p" ? (c.only === "p" ? 1 : 0) : kind === "o" ? (c.ow ? 1 : 0) : c.only ? 0 : SECRET.includes(i) ? SECRET_WEIGHT : 1);
-  if(guaranteed){ const wn = w.map((x, i) => (owned[i] && owned[i][kind]) ? 0 : x); if(wn.some(x => x > 0)) w = wn; }
+  if(guaranteed){
+    let wn = w.map((x, i) => (owned[i] && owned[i][kind]) ? 0 : x);
+    if(kind === "g"){ const w2 = wn.map((x, i) => (owned[i] && owned[i].n) ? x : 0); if(w2.some(x => x > 0)) wn = w2; }
+    if(wn.some(x => x > 0)) w = wn;
+  }
   let r = Math.random() * w.reduce((a, b) => a + b);
   for(let i = 0; i < w.length; i++){ if((r -= w[i]) < 0) return i; }
   return 0;
@@ -345,9 +350,13 @@ function showPack(){
 
 function tear(p){
   p.onclick = null;
-  const r = Math.random(), kind = r < P_PRISM ? "p" : r < P_PRISM + P_OVER ? "o" : r < P_PRISM + P_OVER + P_GOLD ? "g" : "n";
+  const r = Math.random(); let kind = r < P_PRISM ? "p" : r < P_PRISM + P_OVER ? "o" : r < P_PRISM + P_OVER + P_GOLD ? "g" : "n";
   const guaranteed = !daily.g; daily.g = true;
-  const i = pick(kind, guaranteed);
+  let i = pick(kind, guaranteed);
+  if(kind === "g" && !(owned[i] && owned[i].n)){ // la dorada exige tener antes la clásica: si no, sale la clásica
+    kind = "n";
+    if(guaranteed) i = pick("n", true);
+  }
   if(!unlimited) daily.used++;
   saveDay();
   updateSub();
